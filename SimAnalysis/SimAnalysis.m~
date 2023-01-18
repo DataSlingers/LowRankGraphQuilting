@@ -1,0 +1,63 @@
+function[imp_err] = SimAnalysis(imp_est)
+imp_est=cell(6,1);output{1,1}=cell(length(r_list),1);
+imp_est{2,1}=output{1,1};output{3,1}=output{1,1};output{4,1}=output{1,1};
+maxiter=100;tol=1e-5;eta_1=1/max(eig(Sigma_obs));eta_2=1/max(eig(Sigma_obs))/p;
+for jj=1:length(r_list)
+    %low-rank, svd+rotation
+    [Sigma_hat_BSVDLR,U_init1]=svd_rot(Sigma_obs,S_obs,r_list(jj));
+    output{1,1}{jj}=Sigma_hat_BSVDLR;
+    output{1,2}=cat(1,output{1,2},norm(Sigma_hat_BSVDLR-Sigma_n,'Fro'));
+    %low-rank, gradient descent
+    [U,c,Sigma_hat_LRFLR] = gd_planted(p,Omega,Sigma_obs,U_init1,0,0,maxiter,tol,eta_1,eta_2);
+    output{2,1}{jj}=Sigma_hat_LRFLR;
+    output{2,2}=cat(1,output{2,2},norm(Sigma_hat_LRFLR-Sigma_n,'Fro'));
+    %planted model, svd+rotation with c estimated by the median
+    med_c=median(diag(Sigma_obs)); 
+    [Sigma_hat_BSVDALR,U_init2]=svd_rot(Sigma_obs-med_c*eye(p),S_obs,r_list(jj));
+    output{3,1}{jj}=Sigma_hat_BSVDALR;
+    output{3,2}=cat(1,output{3,2},norm(Sigma_hat_BSVDALR-Sigma_n,'Fro'));
+    %planted model, gradient descent
+    [U,c,Sigma_hat_LRFALR] = gd_planted(p,Omega,Sigma_obs,U_init2,med_c,1,maxiter,tol,eta_1,eta_2);
+    output{4,1}{jj}=Sigma_hat_LRFALR;
+    output{4,2}=cat(1,output{4,2},norm(Sigma_hat_LRFALR-Sigma_n,'Fro'));
+end
+
+%nuclear norm minimization
+lambda_list=[0 0.0003 0.001 0.003 0.01 0.03 0.1];
+output{5,1}=cell(length(lambda_list),1);output{6,1}=cell(length(lambda_list),1);
+maxiter=1000;
+for jj=1:length(lambda_list)
+    [L1,c1,Sigma_hat_NNLR,output_nucmin1]  = nucmin(p,Omega,Sigma_obs(Omega),lambda_list(jj),0,maxiter,eta_1,eta_2);
+    output{5,1}{jj}=Sigma_hat_NNLR;
+    output{5,2}=cat(1,output{5,2},norm(Sigma_hat_NNLR-Sigma_n,'Fro'));
+    [L2,c2,Sigma_hat_NNALR,output_nucmin2]  = nucmin(p,Omega,Sigma_obs(Omega),lambda_list(jj),1,maxiter,eta_1,eta_2);
+    output{6,1}{jj}=Sigma_hat_NNALR;
+    output{6,2}=cat(1,output{6,2},norm(Sigma_hat_NNALR-Sigma_n,'Fro'));
+end
+
+%output imputed Sigma for fitting graphical lasso
+method_list = ["BSVDgq, LR","LRFgq, LR","BSVDgq, ALR","LRFgq, ALR","NNgq, LR","NNgq, ALR"];
+nsetting = [repmat(length(r_list),4,1);repmat(length(lambda_list),2,1)];
+for i=1:6
+    for jj=1:nsetting(i)
+        filename = sprintf('SimStudyStar/p_%d_n_%d_K_%d_o_%d_eig_%d_seed_%d_gtype_%s/%s_%d.csv',...
+            p,n,K,o,eigg,seed,graph_type,method_list(i),jj);
+        writematrix(output{i,1}{jj},filename);
+    end
+end
+
+%Compare imputation error
+imp_err = zeros(0);
+dd1 = [];
+dd2 = [];
+for i=1:6
+    [a1, d1] = min(output{i,2});
+    [a2, d2] = min(output{i,3});
+    dd1 = [dd1 d1];
+    dd2 = [dd2 d2];
+    imp_err = cat(1,imp_err,[min(output{i,2}) min(output{i,3})]);
+end
+dd1 = [dd1 0]; dd2 = [dd2 0];
+method_list2 = ["BSVDgq, LR","LRFgq, LR","BSVDgq, ALR","LRFgq, ALR","NNgq, LR","NNgq, ALR", "Zero"];
+imp_err2 = cat(1,imp_err,[norm(Sigma_obs-Sigma_n,'fro') norm(Sigma_obs-Sigma,'fro')]);
+imp_err2 = cat(2, method_list2', dd1', dd2', imp_err2);

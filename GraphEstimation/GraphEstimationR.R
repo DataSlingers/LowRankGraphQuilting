@@ -1,0 +1,95 @@
+args=(commandArgs(TRUE))
+fold_wd = args[[1]]
+print(fold_wd)
+
+library(huge)
+
+source("./GraphEstimation/PSD_proj.R", local = TRUE)
+
+# Uses huge package to estimate graphical lasso from imputed covariance matrices.
+# Inputs:
+## fold_wd: directory location of all the imputed covariance matrices.
+### Assumes that the imputed covariance matrices are in \Imputed subfolder of fold_wd.
+### Assumes that the imputed covariance matrices are the only files in \Imputed subfolder of fold_wd.
+glasso_estimator <- function(fold_wd){
+  # Create save directory for estimated graphs.
+  graph_dir <- paste0(fold_wd, "/GraphEstimates")
+  if (!dir.exists(graph_dir)){
+    dir.create(graph_dir)
+  }
+  true_precision <- as.matrix(read.csv(paste0(fold_wd, "/TruePrecision.csv"), 
+                                       header=FALSE, stringsAsFactors=FALSE))
+  
+  # Load full + partially observed empirical covariance matrices, observation subsets.
+  ObsCov <- as.matrix(read.csv(paste0(fold_wd, "/ObsCov.csv"), header=FALSE))
+  FullCov <- as.matrix(read.csv(paste0(fold_wd, "/FullCov.csv"), header=FALSE))
+  rownames(ObsCov) <- colnames(ObsCov)
+  rownames(FullCov) <- colnames(FullCov)
+  p <- ncol(ObsCov)
+  Omega <- unlist(read.table(paste0(fold_wd, "/Omega.csv"), header = FALSE))
+  offdiag_ind <- which(Omega-floor(Omega/(p+1))*(p+1)!=1)
+  group_list <- read.csv(paste0(fold_wd, "/Obs.csv"), header = FALSE)
+  K <- nrow(group_list)
+  obs_groups <- list()
+  for(jj in 1:K){
+    obs_groups[[jj]] <-  group_list[jj, ][which(!is.na(group_list[jj, ]))]
+  }
+  
+  # Estimate graph from full empirical covariance matrix.
+  out_full <- huge(FullCov, method = 'glasso', nlambda = 50)
+  out_full_selection <- which.min(abs(unlist(lapply(out_full$path, sum)) - (sum(true_precision != 0) - p)))
+  out_full_temp <- as.matrix(out_full$path[[out_full_selection]])
+  Theta_full <- out_full$icov[[out_full_selection]]
+  
+  # Estimate graph from partically observed empirical covariance matrix
+  ### with 0 values for unobserved entries. 
+  if((min(eigen(ObsCov)$values) <= 0)) {
+    # If partially observed covariance matrix is not PSD, project to PSD space.
+    Obs_psd <- proj_cov(ObsCov, matrix(rep(1,p^2),p,p), 0.01, 1,
+                        matrix(rep(0,p^2),p,p), matrix(rep(1,p^2),p,p), 0.001, 500)$projected_S
+    rownames(Obs_psd) <- colnames(Obs_psd)
+    
+    out_temp <- huge(Obs_psd, method="glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+    best_ind <- which.min(abs(unlist(lapply(out_temp$path, sum)) -(sum(true_precision != 0) - p)))
+    Theta_est_temp <- out_temp$icov[[best_ind]]
+  } else {
+    out_temp <- huge(ObsCov, method="glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+    best_ind <- which.min(abs(unlist(lapply(out_temp$path, sum)) -(sum(true_precision != 0) - p)))
+    Theta_est_temp <- out_temp$icov[[best_ind]]
+  }
+  
+  # Save
+  all_files <- list.files(paste0(fold_wd, "/Imputed"), full.names = TRUE)
+  for(ii in 1:length(all_files)){
+    sub_graph_dir <- paste0(graph_dir, "/", strsplit(all_files[ii], "/")[[1]][[length(strsplit(all_files[ii], "/")[[1]])]])
+    if (!dir.exists(sub_graph_dir)){
+      dir.create(sub_graph_dir)
+    }
+    fn <- list.files(all_files[ii], full.names = TRUE)
+    for(kk in fn){
+      est_cov <- read.csv(kk, header = FALSE)
+      edge_sel <- huge(as.matrix(est_cov), method = "glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+      best_ind <- which.min(abs(unlist(lapply(edge_sel$path, sum)) -(sum(true_precision != 0) - p)))
+      write.csv(edge_sel$path[[best_ind]], 
+                paste0(sub_graph_dir, "/", strsplit(strsplit(kk, "/")[[1]][[length(strsplit(kk, "/")[[1]])]], ".csv")[[1]], ".csv"))
+    }
+  }
+  
+  # MADgq estimate.
+  source("./GraphEstimation/reco.R", local = TRUE)
+  reco_graph_dir <- paste0(graph_dir, "/MADgq")
+  if (!dir.exists(reco_graph_dir)){
+    dir.create(reco_graph_dir)
+  }
+  write.csv(g_reco, paste0(reco_graph_dir, "/MADgq.csv"))
+  
+  # Zero imputation estimate.
+  zero_graph_dir <- paste0(graph_dir, "/Zero")
+  if (!dir.exists(zero_graph_dir)){
+    dir.create(zero_graph_dir)
+  }
+  write.csv(Theta_est_temp, paste0(zero_graph_dir, "/Zero.csv"))
+}
+
+# Run function
+glasso_estimator(fold_wd)
