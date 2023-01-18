@@ -4,7 +4,7 @@ addpath(genpath('./'))
 %%% Output folder for results
 output_folder = '/D/ExampleOutput/';
 %%% Maximum rank to estimate for in LRF and BSVD methods.
-max_rank = 30;
+max_rank = 20;
 
 %% Simulate graph structure
 

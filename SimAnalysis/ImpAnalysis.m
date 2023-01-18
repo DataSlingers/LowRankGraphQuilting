@@ -22,7 +22,7 @@ for jj=1:length(r_list)
     %low-rank, gradient descent
     imp_err_all{2,1}=cat(1,imp_err_all{2,1},norm(output{2}{jj}-Sigma_n,'Fro'));
     imp_err_all{2,2}=cat(1,imp_err_all{2,2},norm(output{2}{jj}-Sigma,'Fro'));
-    %planted model, svd+rotation with c estimated by the median
+    %planted model, svd+rotation 
     imp_err_all{3,1}=cat(1,imp_err_all{3,1},norm(output{3}{jj}-Sigma_n,'Fro'));
     imp_err_all{3,2}=cat(1,imp_err_all{3,2},norm(output{3}{jj}-Sigma,'Fro'));
     %planted model, gradient descent
@@ -56,5 +56,5 @@ imp_err = cat(1,imp_err_0,[norm(Sigma_obs-Sigma_n,'fro') norm(Sigma_obs-Sigma,'f
 imp_err = cat(2, method_list2', dd1', dd2', imp_err);
 filename = strcat(output_folder, 'ImputationError.csv');
 imp_err = array2table(imp_err);
-im.Properties.VariableNames = ["Model","BestIndexOriginal","BestIndexData","BestFrobOriginal","BestFrobData"]
+imp_err.Properties.VariableNames = ["Model","BestIndexOriginal","BestIndexData","BestFrobOriginal","BestFrobData"];
 writetable(imp_err,filename);
