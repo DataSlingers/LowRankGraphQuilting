@@ -1,0 +1,8 @@
+Model,BestIndexOriginal,BestIndexData,BestFrobOriginal,BestFrobData
+"BSVDgq, LR",20,3,0.26826,0.29678
+"LRFgq, LR",20,3,0.27062,0.29373
+"BSVDgq, ALR",20,20,0.27949,0.2782
+"LRFgq, ALR",20,20,0.28669,0.28246
+"NNgq, LR",5,5,0.16162,0.18393
+"NNgq, ALR",3,5,0.049685,0.10668
+"Zero",0,0,1.6096,1.6012

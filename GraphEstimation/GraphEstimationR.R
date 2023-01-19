@@ -49,16 +49,16 @@ glasso_estimator <- function(fold_wd){
                         matrix(rep(0,p^2),p,p), matrix(rep(1,p^2),p,p), 0.001, 500)$projected_S
     rownames(Obs_psd) <- colnames(Obs_psd)
     
-    out_temp <- huge(Obs_psd, method="glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+    out_temp <- huge(Obs_psd, method="glasso", lambda = c(out_full$lambda))
     best_ind <- which.min(abs(unlist(lapply(out_temp$path, sum)) -(sum(true_precision != 0) - p)))
     Theta_est_temp <- out_temp$icov[[best_ind]]
   } else {
-    out_temp <- huge(ObsCov, method="glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+    out_temp <- huge(ObsCov, method="glasso", lambda = c(out_full$lambda))
     best_ind <- which.min(abs(unlist(lapply(out_temp$path, sum)) -(sum(true_precision != 0) - p)))
     Theta_est_temp <- out_temp$icov[[best_ind]]
   }
   
-  # Save
+  # Run Glasso
   all_files <- list.files(paste0(fold_wd, "/Imputed"), full.names = TRUE)
   for(ii in 1:length(all_files)){
     sub_graph_dir <- paste0(graph_dir, "/", strsplit(all_files[ii], "/")[[1]][[length(strsplit(all_files[ii], "/")[[1]])]])
@@ -68,7 +68,7 @@ glasso_estimator <- function(fold_wd){
     fn <- list.files(all_files[ii], full.names = TRUE)
     for(kk in fn){
       est_cov <- read.csv(kk, header = FALSE)
-      edge_sel <- huge(as.matrix(est_cov), method = "glasso", lambda = c(out_full$lambda, out_full$lambda / 10))
+      edge_sel <- huge(as.matrix(est_cov), method = "glasso", lambda = c(out_full$lambda))
       best_ind <- which.min(abs(unlist(lapply(edge_sel$path, sum)) -(sum(true_precision != 0) - p)))
       write.csv(edge_sel$path[[best_ind]], 
                 paste0(sub_graph_dir, "/", strsplit(strsplit(kk, "/")[[1]][[length(strsplit(kk, "/")[[1]])]], ".csv")[[1]], ".csv"))

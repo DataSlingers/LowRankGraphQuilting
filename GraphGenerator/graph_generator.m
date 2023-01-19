@@ -33,7 +33,7 @@ if type=="chain"
     end
 % Block diagonal graph.    
 elseif type=="block"
-    blocksize= floor(p / 5);
+    blocksize= floor(p / 3);
     K=floor(p/blocksize);
     prob=1; 
     a=rand([p,p]);

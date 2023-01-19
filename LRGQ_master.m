@@ -2,7 +2,7 @@
 addpath(genpath('./'))
 
 %%% Output folder for results
-output_folder = '/D/ExampleOutput/';
+output_folder = './ExampleOutput/';
 %%% Maximum rank to estimate for in LRF and BSVD methods.
 max_rank = 20;
 
@@ -19,11 +19,11 @@ K = 2;
 o = 60;
 %%% Low-rankness of simulated graph.
 %%%% 1/eigg is the leading eigenvalue of the covariance matrix.
-eigv = 0.1;
+eigv = 0.35;
 %%% Graph type.
 graph_type = 'block';
 %%% Seed for random generation.
-seed = 1000;
+seed = 1001;
 
 % Create true cov mat and inverse cov mat with desired graph structure.
 [Theta,Sigma]=graph_generator(p,seed,eigv,output_folder,graph_type);
