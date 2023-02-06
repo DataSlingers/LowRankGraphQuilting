@@ -17,6 +17,7 @@ function[Sigma_obs, Sigma_n, S_obs, Omega, X] = patch_simulator(Sigma, n, ...
 %%% Sigma_n: empirical covariance matrix, sampled from true covariance
 %%%% matrix.
 %%% S_obs: cell of lists containing features in each observation subset.
+%%%% Must have some overlap.
 %%% Omega: list of unique covariance matrix entries that are part of the
 %%%% observed set.
 %%% X: random data generated from true underlying covariance matrix, used
