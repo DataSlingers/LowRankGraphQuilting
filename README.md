@@ -3,7 +3,7 @@
 This package implements the Low Rank Graphing Quilting procedures. 
 
 # Requirements
-- MATLAB 9.6+
+- MATLAB 2025b+
 - R 4.5.0+
   - `huge` package, 1.6.0+
   - `tidyverse` package, 2.0.0+
